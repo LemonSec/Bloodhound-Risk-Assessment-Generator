@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BloodHound IR Report</title>
+<style>
+  :root{--bg0:#0a0e17;--bg2:#1a2235;--bg3:#1f2a40;--bdr:#2a3550;--bdr-a:#3b82f6;--t1:#e2e8f0;--t2:#94a3b8;--t3:#64748b;--red:#ef4444;--amb:#f59e0b;--grn:#22c55e;--blu:#3b82f6;--cyn:#06b6d4}
+  *{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg0);color:var(--t1);line-height:1.6}
+  .hdr{background:linear-gradient(135deg,#0f172a,#1e1b4b,#0f172a);border-bottom:1px solid var(--bdr);padding:2.5rem 2rem}
+  .hdr h1{font-size:1.8rem;font-weight:700;color:#fff;font-family:Consolas,monospace}.hdr h1 span{color:var(--cyn)}.hdr .sub{color:var(--t2);margin-top:.4rem}.hdr .meta{font-family:Consolas,monospace;font-size:.78rem;color:var(--t3);margin-top:.6rem}
+  .wrap{max-width:1400px;margin:0 auto;padding:2rem}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.8rem;margin-bottom:2rem}
+  .sc{background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;padding:1rem}.sc:hover{border-color:var(--bdr-a)}.sc .v{font-family:Consolas,monospace;font-size:1.6rem;font-weight:700;color:#fff}.sc .l{font-size:.7rem;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-top:.2rem}.sc.w .v{color:var(--amb)}.sc.d .v{color:var(--red)}.sc.g .v{color:var(--grn)}
+  .toc{background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;padding:1.2rem 1.5rem;margin-bottom:2rem}.toc h2{font-family:Consolas,monospace;font-size:.8rem;text-transform:uppercase;color:var(--t3);margin-bottom:.8rem}.toc-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:.3rem 1.5rem}.toc a{color:var(--cyn);text-decoration:none;font-size:.85rem;display:block}.toc a:hover{color:#fff}
+  .sec{background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;margin-bottom:1.5rem;overflow:hidden}
+  .sec-h{padding:1rem 1.25rem;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:.6rem}.sec-h .ico{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0}
+  .ico.cr{background:rgba(239,68,68,.12);color:var(--red)}.ico.wr{background:rgba(245,158,11,.12);color:var(--amb)}.ico.in{background:rgba(59,130,246,.12);color:var(--blu)}.ico.gn{background:rgba(34,197,94,.12);color:var(--grn)}
+  .sec-h h2{font-family:Consolas,monospace;font-size:.95rem;font-weight:600;color:#fff}.sec-h .cnt{font-family:Consolas,monospace;font-size:.75rem;background:var(--bg0);color:var(--t2);padding:.1rem .5rem;border-radius:10px;margin-left:auto}.sec-b{padding:1rem 1.25rem}
+  .desc{font-size:.84rem;color:var(--t2);margin-bottom:1rem;line-height:1.6;border-left:3px solid var(--bdr-a);padding:.7rem 1rem;background:rgba(59,130,246,.03);border-radius:0 5px 5px 0}.desc.wr{border-left-color:var(--amb);background:rgba(245,158,11,.03)}.desc.cr{border-left-color:var(--red);background:rgba(239,68,68,.03)}.desc.gn{border-left-color:var(--grn);background:rgba(34,197,94,.03)}.desc strong{color:var(--t1)}
+  .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.78rem}
+  thead th{font-family:Consolas,monospace;font-size:.68rem;text-transform:uppercase;color:var(--t3);text-align:left;padding:.5rem .6rem;border-bottom:1px solid var(--bdr);white-space:nowrap;background:var(--bg2);position:sticky;top:0}
+  tbody td{padding:.45rem .6rem;border-bottom:1px solid rgba(42,53,80,.35);color:var(--t1);font-family:Consolas,monospace;font-size:.74rem;max-width:300px;overflow:hidden;text-overflow:ellipsis}tbody tr:hover{background:var(--bg3)}tbody tr:last-child td{border-bottom:none}
+  .val-true{color:var(--grn)!important;font-weight:600}.val-false{color:var(--t3)!important}.empty-state{text-align:center;color:var(--t3);padding:2rem;font-style:italic}
+  .expand-btn{display:block;width:100%;padding:.6rem;margin-top:.5rem;background:var(--bg0);color:var(--cyn);border:1px solid var(--bdr);border-radius:6px;cursor:pointer;font-family:Consolas,monospace;font-size:.8rem;text-align:center}.expand-btn:hover{background:var(--bg3);border-color:var(--cyn)}
+  .ftr{text-align:center;padding:1.5rem;color:var(--t3);font-size:.7rem;border-top:1px solid var(--bdr);margin-top:1.5rem;font-family:Consolas,monospace}
+  @media print{body{background:#fff;color:#000}.sec,.sc,.toc{border-color:#ccc;background:#fff}.sec-h h2,.sc .v{color:#000}.hdr{background:#f0f0f0}.hidden-row{display:table-row!important}.expand-btn{display:none}}
+</style>
+<script>function toggleRows(id,btn){var w=document.getElementById(id),r=w.querySelectorAll('tr.hidden-row'),s=r[0]&&r[0].style.display!=='none';for(var i=0;i<r.length;i++)r[i].style.display=s?'none':'table-row';if(!btn.dataset.orig){btn.dataset.orig=btn.textContent}btn.textContent=s?btn.dataset.orig:'Collapse to 10 rows'}</script>
+</head>
+<body>
+<div class="hdr"><h1>&#x1F6E1; BLOODHOUND <span>IR REPORT</span></h1><div class="sub">Active Directory Incident Response &amp; Risk Assessment</div><div class="meta">Generated: {{TIMESTAMP}} | Source: {{ZIPNAME}}</div></div>
+<div class="wrap">
+<div class="stats">
+  <div class="sc"><div class="v">{{TOTAL_USERS}}</div><div class="l">Total Users</div></div>
+  <div class="sc g"><div class="v">{{ENABLED_USERS}}</div><div class="l">Enabled Users</div></div>
+  <div class="sc"><div class="v">{{DISABLED_USERS}}</div><div class="l">Disabled</div></div>
+  <div class="sc w"><div class="v">{{ADMIN_COUNT}}</div><div class="l">AdminCount=True</div></div>
+  <div class="sc d"><div class="v">{{KERBEROASTABLE_CNT}}</div><div class="l">Kerberoastable</div></div>
+  <div class="sc d"><div class="v">{{ASREP_CNT}}</div><div class="l">AS-REP Roastable</div></div>
+  <div class="sc w"><div class="v">{{PWD_NEVER_EXP}}</div><div class="l">Pwd Never Expires</div></div>
+  <div class="sc"><div class="v">{{TOTAL_COMPUTERS}}</div><div class="l">Computers</div></div>
+  <div class="sc"><div class="v">{{TOTAL_GROUPS}}</div><div class="l">Groups</div></div>
+  <div class="sc"><div class="v">{{TOTAL_DOMAINS}}</div><div class="l">Domains</div></div>
+</div>
+<div class="toc"><h2>Table of Contents</h2><div class="toc-g">
+  <a href="#s1">01 Enabled DA &amp; EA</a><a href="#s2">02 All DA/EA Members</a><a href="#s3">03 New Users (90d)</a>
+  <a href="#s4">04 Kerberoastable</a><a href="#s5">05 AS-REP Roastable</a><a href="#s6">06 Unconstrained Delegation</a>
+  <a href="#s7">07 Constrained Delegation</a><a href="#s8">08 High-Value Targets</a><a href="#s9">09 Stale Passwords</a>
+  <a href="#s10">10 Pwd Never Expires</a><a href="#s11">11 Inactive Accounts (90d)</a><a href="#s12">12 Not in Protected Users</a>
+  <a href="#s13">13 LAPS Missing</a><a href="#s14">14 Domain Controllers</a><a href="#s15">15 OS Breakdown</a>
+  <a href="#s16">16 Domain Trusts</a><a href="#s17">17 Password Not Required</a><a href="#s18">18 Password Policy &amp; Best Practices</a>
+</div></div>
+
+<div class="sec" id="s1"><div class="sec-h"><div class="ico cr">!</div><h2>01 - Enabled Domain &amp; Enterprise Admins</h2><span class="cnt">{{CNT_ENA_DA}} found</span></div><div class="sec-b"><div class="desc cr"><strong>IR:</strong> Highest-privilege accounts. Verify each is authorized. Check WhenCreated against compromise timeline. HasSPN=YES = Kerberoastable. DontReqPreauth=YES = AS-REP Roastable.</div>{{TBL_ENABLEDDA}}</div></div>
+
+<div class="sec" id="s2"><div class="sec-h"><div class="ico cr">&#x1F464;</div><h2>02 - All DA/EA Members (incl. Disabled)</h2><span class="cnt">{{CNT_ALL_DA}} found</span></div><div class="sec-b"><div class="desc"><strong>IR:</strong> Complete listing. Disabled admin accounts may have been compromised then deactivated. Compare against authorized roster.</div>{{TBL_ALLDA}}</div></div>
+
+<div class="sec" id="s3"><div class="sec-h"><div class="ico cr">&#x1F195;</div><h2>03 - Recently Created Users (90 Days)</h2><span class="cnt">{{CNT_NEW_USERS}} found</span></div><div class="sec-b"><div class="desc cr"><strong>IR:</strong> Persistence via T1136.002. Investigate accounts created during compromise window. Red flags: generic names, AdminCount, SPNs set, no description.</div>{{TBL_NEWUSERS}}</div></div>
+
+<div class="sec" id="s4"><div class="sec-h"><div class="ico wr">&#x1F511;</div><h2>04 - Kerberoastable Users</h2><span class="cnt">{{CNT_KERB}} found</span></div><div class="sec-b"><div class="desc wr"><strong>IR:</strong> T1558.003 - any authenticated user can crack these offline. AdminCount=YES = critical. Older passwords = higher crack risk. Rotate immediately.</div>{{TBL_KERB}}</div></div>
+
+<div class="sec" id="s5"><div class="sec-h"><div class="ico wr">&#x1F513;</div><h2>05 - AS-REP Roastable Users</h2><span class="cnt">{{CNT_ASREP}} found</span></div><div class="sec-b"><div class="desc wr"><strong>IR:</strong> T1558.004 - offline cracking without domain creds. Attackers set this flag as persistence. AdminCount + this = critical.</div>{{TBL_ASREP}}</div></div>
+
+<div class="sec" id="s6"><div class="sec-h"><div class="ico wr">&#x1F310;</div><h2>06 - Unconstrained Delegation</h2><span class="cnt">{{CNT_UNCON}} found</span></div><div class="sec-b"><div class="desc wr"><strong>IR:</strong> Caches TGTs of authenticating users. Compromised = impersonate anyone including DAs. Non-DC systems are high-priority targets.</div>{{TBL_UNCONSTRAINED}}</div></div>
+
+<div class="sec" id="s7"><div class="sec-h"><div class="ico wr">&#x1F517;</div><h2>07 - Constrained Delegation</h2><span class="cnt">{{CNT_CONSTRAINED}} found</span></div><div class="sec-b"><div class="desc wr"><strong>IR:</strong> Can impersonate users to specific services. With protocol transition (S4U2Self), attacker can impersonate ANY user to allowed services. Review targets for CIFS/LDAP/HTTP on DCs.</div>{{TBL_CONSTRAINED}}</div></div>
+
+<div class="sec" id="s8"><div class="sec-h"><div class="ico cr">&#x1F3AF;</div><h2>08 - High-Value Targets</h2><span class="cnt">{{CNT_HVT}} found</span></div><div class="sec-b"><div class="desc cr"><strong>IR:</strong> Multiple risk factors combined. AdminCount + Kerberoastable/ASREPRoastable = top priority for password resets and logon review.</div>{{TBL_HVT}}</div></div>
+
+<div class="sec" id="s9"><div class="sec-h"><div class="ico wr">&#x23F3;</div><h2>09 - Stale Passwords (&gt;365 Days)</h2><span class="cnt">{{CNT_STALE}} found</span></div><div class="sec-b"><div class="desc wr"><strong>IR:</strong> Older passwords = higher compromise likelihood via offline cracking. AdminCount + stale = critical. Force resets.</div>{{TBL_STALE}}</div></div>
+
+<div class="sec" id="s10"><div class="sec-h"><div class="ico in">&#x267E;</div><h2>10 - Password Never Expires</h2><span class="cnt">{{CNT_NEVER_EXP}} found</span></div><div class="sec-b"><div class="desc"><strong>IR:</strong> Bypasses rotation = long-term persistence. AdminCount or HasSPN combined = high priority.</div>{{TBL_NEVEREXP}}</div></div>
+
+<div class="sec" id="s11"><div class="sec-h"><div class="ico wr">&#x1F4A4;</div><h2>11 - Inactive/Dormant Accounts (90 Days)</h2><span class="cnt">{{CNT_INACTIVE}} found</span></div><div class="sec-b"><div class="desc wr"><strong>IR:</strong> Enabled accounts with no logon in 90+ days. Attackers target dormant accounts since theft goes unnoticed. Disable or delete unjustified accounts.</div>{{TBL_INACTIVE}}</div></div>
+
+<div class="sec" id="s12"><div class="sec-h"><div class="ico cr">&#x1F6AB;</div><h2>12 - Privileged Accounts NOT in Protected Users</h2><span class="cnt">{{CNT_NOT_PROTECTED}} found</span></div><div class="sec-b"><div class="desc cr"><strong>IR:</strong> Protected Users group enforces: no NTLM, no delegation, no DES/RC4, shorter TGT. AdminCount accounts not in this group are vulnerable to NTLM relay, pass-the-hash, and delegation abuse. All DA/EA should be members.</div>{{TBL_NOTPROTECTED}}</div></div>
+
+<div class="sec" id="s13"><div class="sec-h"><div class="ico wr">&#x1F4BB;</div><h2>13 - Computers Missing LAPS</h2><span class="cnt">{{CNT_LAPS}} found</span></div><div class="sec-b"><div class="desc wr"><strong>IR:</strong> Without LAPS, local admin passwords are often identical across systems = lateral movement via pass-the-hash. DCs excluded. If LAPS data absent from collection, all non-DC computers appear here.</div>{{TBL_LAPS}}</div></div>
+
+<div class="sec" id="s14"><div class="sec-h"><div class="ico in">&#x1F3E2;</div><h2>14 - Domain Controllers</h2><span class="cnt">{{CNT_DCS}} found</span></div><div class="sec-b"><div class="desc"><strong>IR:</strong> Verify expected DC list. Rogue DCs = DCShadow (T1207). Check OS for known vulns.</div>{{TBL_DCS}}</div></div>
+
+<div class="sec" id="s15"><div class="sec-h"><div class="ico in">&#x1F4BB;</div><h2>15 - Operating System Breakdown</h2><span class="cnt">{{CNT_OS}} types</span></div><div class="sec-b"><div class="desc"><strong>IR:</strong> Legacy OS (2003/2008/XP/Vista/7/8) = EternalBlue, PrintNightmare, etc. Prioritize for isolation.</div>{{TBL_OS}}</div></div>
+
+<div class="sec" id="s16"><div class="sec-h"><div class="ico in">&#x1F517;</div><h2>16 - Domain Trust Relationships</h2><span class="cnt">{{CNT_TRUSTS}} trusts</span></div><div class="sec-b"><div class="desc"><strong>IR:</strong> Defines blast radius. Bidirectional + no SID Filtering = cross-trust escalation via Golden Ticket / SID History injection.</div>{{TBL_TRUSTS}}</div></div>
+
+<div class="sec" id="s17"><div class="sec-h"><div class="ico cr">&#x1F510;</div><h2>17 - Accounts with Password Not Required (PASSWD_NOTREQD)</h2><span class="cnt">{{CNT_PWDNOTREQD}} found</span></div><div class="sec-b"><div class="desc cr"><strong>IR:</strong> The PASSWD_NOTREQD flag in UserAccountControl means the account can have a blank password, bypassing domain password policy entirely. This is often set during migration or by legacy provisioning scripts and forgotten. Enabled accounts with this flag are trivially compromisable. AdminCount=YES or HasSPN=YES combined with this flag = critical. Remediation: clear the flag and force a password reset.</div>{{TBL_PWDNOTREQD}}</div></div>
+
+<div class="sec" id="s18"><div class="sec-h"><div class="ico gn">&#x1F4CB;</div><h2>18 - Domain Password Policy &amp; Security Configuration</h2><span class="cnt">Best Practices Audit</span></div><div class="sec-b"><div class="desc gn"><strong>Best Practices:</strong> This section extracts password policy and security settings directly from BloodHound domain data. Key items to review: <strong>MinPasswordLength</strong> should be 14+ characters. <strong>Password Complexity</strong> should be Enabled. <strong>Lockout Threshold</strong> of 0 means no lockout (spray attacks possible). <strong>Password History</strong> below 12 allows reuse. <strong>Reversible Encryption</strong> should NEVER be enabled. <strong>MachineAccountQuota</strong> &gt; 0 means any user can join computers to the domain (used for relay attacks, RBCD abuse). <strong>Functional Level</strong> below 2012 R2 means Protected Users group and Auth Policies are unavailable.</div>{{TBL_PWDPOLICY}}</div></div>
+
+</div>
+<div class="ftr">BloodHound IR Analyzer - Generated {{TIMESTAMP}} - For authorized incident response use only</div>
+</body></html>
